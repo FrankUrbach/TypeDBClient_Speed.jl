@@ -1,0 +1,236 @@
+define
+
+##########################
+# Entities
+##########################
+gene sub entity,
+    owns gene-symbol,
+    owns entrez-id,
+    owns ensembl-id,
+    owns gene-name,
+    plays gene-protein-encoding:encoding-gene,
+    plays genetic-analysis:analysed-gene,
+    plays gene-disease-association:associated-gene,
+    plays drug-gene-interaction:target-gene,
+    plays differentially-expressed-finding:differentially-expressed-gene;
+protein sub entity,
+    owns uniprot-id,
+    owns uniprot-name,
+    owns protein-name,
+    plays gene-protein-encoding:encoded-protein,
+    plays tissue-enhancement:expressed-protein,
+    plays protein-disease-association:associated-protein,
+    plays protein-protein-interaction:interacting-protein,
+    plays pathway-participation:participating-protein,
+    plays drug-protein-interaction:target-protein,
+    plays protein-sequence-similarity:sequence-similar-protein;
+disease sub entity,
+    owns disease-name,
+    owns disease-id,
+    plays protein-disease-association:associated-disease,
+    plays drug-disease-association:affected-disease;
+drug sub entity,
+    owns drug-name,
+    owns drug-chembl-id,
+    plays drug-protein-interaction:inhibitor,
+    plays drug-protein-interaction:antagonist,
+    plays drug-protein-interaction:blocker,
+    plays drug-disease-association:therapeutic,
+    plays drug-gene-interaction:interacted-drug,
+    plays drug-tissue-association:associated-drug;
+tissue sub entity,
+    owns tissue-name,
+    plays tissue-enhancement:enhanced-tissue,
+    plays process-localisation:tissue-context,
+    plays gene-tissue-association:associated-tissue;
+# This relation can be reused anywhere where we want to record where data was ingested from
+database sub entity,
+    owns database-name,
+    plays data-ingestion:ingested-source;
+geo-series sub entity,
+    owns GEOStudy-id,
+    plays comparison:containing-study;
+pathway sub entity,
+    owns pathway-name,
+    owns pathway-id,
+    plays pathway-participation:participated-pathway;
+geo-comparison sub entity,
+	owns GEOComparison-id,
+	plays comparison:compared-groups,
+	plays genetic-analysis:conducted-analysis;
+
+##########################
+# Relations
+##########################
+comparison sub relation,
+    relates containing-study,
+    relates compared-groups;
+genetic-analysis sub relation,
+	relates conducted-analysis,
+	relates analysed-gene,
+	owns p-value;
+differentially-expressed-finding sub relation,
+	relates conducted-analysis,
+    relates differentially-expressed-gene;
+protein-sequence-similarity sub relation,
+    relates sequence-similar-protein;
+gene-protein-encoding sub relation,
+	relates encoded-protein,
+	relates encoding-gene;
+protein-disease-association sub relation,
+    relates associated-protein,
+    relates associated-disease,
+    plays data-ingestion:ingested-data,
+    owns score;
+gene-disease-association sub relation,
+    relates associated-gene,
+    relates associated-disease,
+    plays data-ingestion:ingested-data,
+    owns score;
+gene-tissue-association sub relation,
+	relates associated-tissue,
+	relates associated-gene;
+data-ingestion sub relation,
+    relates ingested-data,
+    relates ingested-source;
+drug-protein-interaction sub relation,
+    relates inhibitor,
+    relates antagonist,
+    relates blocker,
+    relates target-protein;
+drug-gene-interaction sub relation,
+    relates target-gene,
+    relates interacted-drug;
+tissue-enhancement sub relation,
+    relates enhanced-tissue,
+    relates expressed-protein;
+process-localisation sub relation,
+    relates biomolecular-process,
+    relates tissue-context;
+molecular-interaction sub relation,
+    relates interacting-molecule;
+protein-protein-interaction sub molecular-interaction,
+    relates interacting-protein as interacting-molecule,
+    plays process-localisation:biomolecular-process;
+drug-disease-association sub relation,
+    relates affected-disease,
+    relates therapeutic;
+pathway-participation sub relation,
+	relates participating-protein,
+	relates participated-pathway;
+disease-tissue-association sub relation,
+    relates associated-disease,
+    relates associated-tissue;
+drug-tissue-association sub relation,
+    relates associated-drug,
+    relates associated-tissue;
+
+##########################
+# Attributes
+##########################
+name sub attribute, value string, abstract;
+disease-name sub name;
+database-name sub name;
+uniprot-name sub name;
+gene-symbol sub name;
+gene-name sub name;
+protein-name sub name;
+pathway-name sub name;
+tissue-name sub name;
+drug-name sub name;
+
+identifier sub attribute, value string, abstract;
+disease-id sub identifier;
+protein-id sub identifier, abstract;
+uniprot-id sub protein-id;
+entrez-id sub protein-id;
+ensembl-id sub protein-id;
+GEOStudy-id sub identifier;
+GEOComparison-id sub identifier;
+pathway-id sub identifier;
+drug-chembl-id sub identifier;
+
+p-value sub attribute, value double;
+score sub attribute, value double;
+
+##########################
+# Rules
+##########################
+# rule when-p-value-sufficient-then-gene-differentially-expressed :
+# when {
+# 	$gc isa geo-comparison;
+# 	$g isa gene;
+# 	$gn (conducted-analysis: $gc, analysed-gene: $g) isa genetic-analysis, has p-value $v;
+#     $v <= 0.1;
+# } then {
+#     (differentially-expressed-gene: $g, conducted-analysis: $gc) isa differentially-expressed-finding;
+# };
+
+# rule gene-disease-association-and-gene-protein-encoding-protein-disease-association:
+# when {
+#     $g isa gene;
+#     $pr isa protein;
+#     $di isa disease;
+#     (associated-disease: $di, associated-gene: $g) isa gene-disease-association;
+#     (encoding-gene: $g, encoded-protein: $pr) isa gene-protein-encoding;
+# } then {
+#     (associated-protein: $pr, associated-disease: $di) isa protein-disease-association;
+# };
+
+# gene-tissue-association-gene-protein-encoding-implies-tissue-enhancement sub rule,
+# when {
+#     $g isa gene;
+#     $pr isa protein;
+#     $ti isa tissue;
+#     (associated-tissue: $ti, associated-gene: $g) isa gene-tissue-association;
+#     (encoding-gene: $g, encoded-protein: $pr) isa gene-protein-encoding;
+# }, then {
+#     (expressed-protein: $pr, enhanced-tissue: $ti) isa tissue-enhancement;
+# };
+
+# drug-gene-interaction-and-gene-protein-encoding-implies-drug-protein-interaction sub rule,
+# when {
+#     $g isa gene;
+#     $pr isa protein;
+#     $dr isa drug;
+#     ($dr, target-gene: $g) isa drug-gene-interaction;
+#     (encoding-gene: $g, encoded-protein: $pr) isa gene-protein-encoding;
+# }, then {
+#     (target-protein: $pr, inhibitor: $dr) isa drug-protein-interaction;
+# };
+
+# protein-disease-association-and-protein-sequence-similarity-implies-drug-disease-association sub rule,
+# when {
+# 	$di isa disease;
+# 	$pr isa protein;
+# 	$pr2 isa protein;
+# 	$pr != $pr2;
+# 	$dr isa drug;
+# 	(associated-disease: $di, associated-protein: $pr) isa protein-disease-association;
+# 	(sequence-similar-protein: $pr, sequence-similar-protein: $pr2) isa protein-sequence-similarity;
+# 	(target-protein: $pr2, $dr) isa drug-protein-interaction;
+# }, then {
+# 	(affected-disease: $di, therapeutic: $dr) isa drug-disease-association;
+# };
+
+# protein-disease-association-and-tissue-enhancement-implies-disease-tissue-association sub rule,
+# when {
+#    $di isa disease;
+#    $pr isa protein;
+#    $ti isa tissue;
+#    (associated-disease: $di, associated-protein: $pr) isa protein-disease-association;
+#    (expressed-protein: $pr, enhanced-tissue: $ti) isa tissue-enhancement;
+# }, then {
+#    (associated-disease: $di, associated-tissue: $ti) isa disease-tissue-association;
+# };
+
+# drug-gene-interaction-and-gene-tissue-association-implies-drug-tissue-association sub rule,
+# when {
+#    $dr isa drug;
+#    $ti isa tissue;
+#    $ge isa gene;
+#    (interacted-drug: $dr, target-gene: $ge) isa drug-gene-interaction;
+#    (associated-gene: $ge, associated-tissue: $ti) isa gene-tissue-association;
+# }, then {
+#    (associated-drug: $dr, associated-tissue: $ti) isa drug-tissue-association;
+# };
