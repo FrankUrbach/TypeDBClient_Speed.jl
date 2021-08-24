@@ -36,68 +36,56 @@ function uniprot(client::TypeDBClient.AbstractCoreClient, database_name::String,
         end
         end_preparing = time()
 
-        # @info "Time for preparing: $(end_preparing - start_preparing)"
+        @info "Time for preparing: $(end_preparing - start_preparing)"
 
         sess = g.CoreSession(client, database_name , g.Proto.Session_Type.DATA, request_timout=Inf)
 
         if make_inserts
             start_insert = time()
-               res_insert = insert_data(sess, query_strings, 1000)
+               res_insert = insert_data(sess, query_strings, 500)
             end_insert = time()
             @info "Uniprot in $(end_insert - start_insert) s"
         end
         return res_insert
 end
 
-function transaction_insert(trans::g.AbstractCoreTransaction, inp_channel::Channel, count_channel::Channel, nr_channel)
-    @info "Channel Nr: $nr_channel is open"
-    while isopen(inp_channel)
-        yield()
-        if isready(inp_channel)
-            tmp_vector = take!(inp_channel)
-            for str in tmp_vector
-                g.insert(trans, str)
-            end
-            put!(count_channel, 1)
-        end
+function transaction_insert(trans::g.AbstractCoreTransaction, data, count_channel::Channel, nr_channel)
+    count_transactions = length(trans.session.transactions)
+    @info "Channel Nr: $nr_channel is open. Transactions open: $count_transactions"
+    for str in data
+        g.insert(trans, str)
     end
     g.commit(trans)
-    @info "Transaction channel Nr: $nr_channel commited"
+    put!(count_channel, nr_channel)
 end
 
 function insert_data(session::g.AbstractCoreSession, data::Vector{String}, intervall::Int64 = 100)
     ranges = divid_into_intervals(data, intervall)
     length_ranges = length(ranges)
     @info "Length ranges $(length_ranges)"
-    inp_channel = Channel(1000)
-    count_channel = Channel(10)
+    count_channel = Channel(20)
 
     count_fullfilled_range = 0
     @info "Made input channel"
     # make worker
 
-    for i in 1:23
-        tmp_trans = g.transaction(session, g.Proto.Transaction_Type.WRITE)
-        @async transaction_insert(tmp_trans, inp_channel, count_channel,i)
+     task = @async for _ in 1:length_ranges
+        tmp =  take!(count_channel)
+        @info "Taken out: $tmp"
+     end
+
+    tmp_session = session
+    for i in 1:length_ranges
+        if i % 4 == 0
+            tmp_client = g.CoreClient("127.0.0.1",1729)
+            tmp_session = g.CoreSession(tmp_client, database_name , g.Proto.Session_Type.DATA, request_timout=Inf)
+        end
+        tmp_trans = g.transaction(tmp_session, g.Proto.Transaction_Type.WRITE)
+        @async transaction_insert(tmp_trans,ranges[i] , count_channel,i)
     end
 
-    @info "Made worker"
-    # divide the work
-    for ran in ranges
-        if isopen(inp_channel)
-            put!(inp_channel, ran)
-        else
-            throw("channel closed")
-        end
-    end
-    while count_fullfilled_range < length_ranges
-        if isopen(count_channel)
-            if isready(count_channel)
-                count_fullfilled_range += take!(count_channel)
-            end
-        end
-    end
-    close(inp_channel)
+    wait(task)
+
 end
 
 times = uniprot(client, database_name, true)
