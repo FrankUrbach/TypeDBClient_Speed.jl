@@ -49,35 +49,59 @@ function uniprot(client::TypeDBClient.AbstractCoreClient, database_name::String,
         return res_insert
 end
 
-function transaction_insert(trans::g.AbstractCoreTransaction, data, counter)
-    time1 = time()
-    @sync @async for row in data
-        g.insert(trans, row)
+function transaction_insert(trans::g.AbstractCoreTransaction, inp_channel::Channel, count_channel::Channel, nr_channel)
+    @info "Channel Nr: $nr_channel is open"
+    while isopen(inp_channel)
+        yield()
+        if isready(inp_channel)
+            tmp_vector = take!(inp_channel)
+            for str in tmp_vector
+                g.insert(trans, str)
+            end
+            put!(count_channel, 1)
+        end
     end
-    time2 = time()
-    @info "Einer fertig time: $(round(time2 - time1, digits=2)) s : counter: $counter"
+    g.commit(trans)
+    @info "Transaction channel Nr: $nr_channel commited"
 end
 
 function insert_data(session::g.AbstractCoreSession, data::Vector{String}, intervall::Int64 = 100)
     ranges = divid_into_intervals(data, intervall)
-    @info "Slice to insert: $(length(ranges))"
-    ins_number = Threads.Atomic{Int64}(0)
-    times = Float64[]
-    @sync for rang in ranges
-        Threads.atomic_add!(ins_number, 1)
-        Threads.@spawn begin
-            trans = g.transaction(session, g.Proto.Transaction_Type.WRITE)
-            transaction_insert(trans, rang, ins_number)
-            g.commit(trans)
-        end
-        push!(times, time())
-        @info "Process $(ins_number.value) started at: $(now())"
+    length_ranges = length(ranges)
+    @info "Length ranges $(length_ranges)"
+    inp_channel = Channel(1000)
+    count_channel = Channel(10)
+
+    count_fullfilled_range = 0
+    @info "Made input channel"
+    # make worker
+
+    for i in 1:23
+        tmp_trans = g.transaction(session, g.Proto.Transaction_Type.WRITE)
+        @async transaction_insert(tmp_trans, inp_channel, count_channel,i)
     end
-    return times
+
+    @info "Made worker"
+    # divide the work
+    for ran in ranges
+        if isopen(inp_channel)
+            put!(inp_channel, ran)
+        else
+            throw("channel closed")
+        end
+    end
+    while count_fullfilled_range < length_ranges
+        if isopen(count_channel)
+            if isready(count_channel)
+                count_fullfilled_range += take!(count_channel)
+            end
+        end
+    end
+    close(inp_channel)
 end
 
 times = uniprot(client, database_name, true)
 
-for i in 2:length(times)
-    @info round(times[i] - times[i-1], digits=2)
-end
+# for i in 2:length(times)
+#     @info round(times[i] - times[i-1], digits=2)
+# end

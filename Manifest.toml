@@ -651,9 +651,7 @@ version = "1.5.7"
 
 [[TypeDBClient]]
 deps = ["Behavior", "DataStructures", "Dates", "Documenter", "Pretend", "ProtoBuf", "Sockets", "TimeZones", "UUIDs", "gRPCClient"]
-git-tree-sha1 = "4e32396736bb15a34803c010909fdbb7cb1acd89"
-repo-rev = "ms/bdd-concepts"
-repo-url = "https://github.com/Humans-of-Julia/TypeDBClient.jl.git"
+path = "/Users/frank/.julia/dev/TypeDBClient"
 uuid = "7ffdda62-db04-4838-9798-febd00f3125c"
 version = "0.1.0"
 
