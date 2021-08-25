@@ -8,6 +8,6 @@
 # Todo test things out
 
 Start the TypeDB server from the commandline. Be sure that all databases you have are saved on another place because they will be deleted by starting the test.
-Run the file TypeDBClient_Speed.jl an the test will run over the dataset an try to insert this dataset as fast as it can.
+Run the file TypeDBClient_Speed.jl and the test will run over the dataset an try to insert this dataset as fast as it can.
 
 Have fun!!
