@@ -3,4 +3,10 @@
 *.jl.mem
 /docs/build/
 Manifest.toml
-/dataset/*
+/dataset/dgidb
+/dataset/disgenet
+/dataset/kaneko
+/dataset/ncbi
+/dataset/proteinatlas
+/dataset/reactome
+/dataset/tissuenet
