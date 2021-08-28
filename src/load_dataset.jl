@@ -54,13 +54,14 @@ $ julia --project=. -p 16
 @everywhere include("src/load_dataset.jl")
 @everywhere queries = make_queries(load_data())
 @everywhere batch_size = 500
-@time parallel_insert_records()
+@time parallel_run()
 
 The first time takes longer as usual and gives error (should investigate later).
 Run the function again to get warmed-up timings.
 =#
 function parallel_run()
     @everywhere batches = collect(Iterators.partition(queries, batch_size))
+    @info "Distributing work over " * string(length(batches)) * " batches"
     @sync @distributed for i in 1:length(batches)
         batched_queries = batches[i]
         dbconnect("127.0.0.1") do client
