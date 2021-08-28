@@ -77,3 +77,12 @@ function parallel_run()
     end
 end
 
+function get_env_batch_size()
+    default_batch_size = 500
+    try
+        return parse(Int, get(ENV, "BATCH_SIZE", "$default_batch_size"))
+    catch ex
+        @warn "Unable to parse BATCH_SIZE, defaulting to $default_batch_size"
+        return default_batch_size
+    end
+end
