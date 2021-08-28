@@ -540,7 +540,7 @@ version = "0.6.10"
 
 [[ProtoBuf]]
 deps = ["Logging", "protoc_jll"]
-git-tree-sha1 = "3142e13697a7f6363798d1241daf3e6cead83008"
+path = "/Users/frank/.julia/dev/ProtoBuf"
 uuid = "3349acd9-ac6a-5e09-bcdb-63829b23a429"
 version = "0.11.2"
 
@@ -830,7 +830,7 @@ version = "2.34.0+4"
 
 [[gRPCClient]]
 deps = ["Downloads", "LibCURL", "ProtoBuf"]
-git-tree-sha1 = "4af4d0cf47018ce4bd5cd8f0d172ed7dbca87380"
+path = "/Users/frank/.julia/dev/gRPCClient"
 uuid = "aaca4a50-36af-4a1d-b878-4c443f2061ad"
 version = "0.1.2"
 

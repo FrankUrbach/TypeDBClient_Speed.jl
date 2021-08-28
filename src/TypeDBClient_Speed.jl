@@ -25,9 +25,8 @@ function uniprot(client::TypeDBClient.AbstractCoreClient, database_name::String,
         @info "1. Uniprot"
         df = CSV.File(joinpath(@__DIR__, "../dataset/uniprot/uniprot.csv"), delim="\t") |> DataFrame
 
-        query_strings = String[]
-
         start_preparing = time()
+        query_strings = String[]
         data_pair = Pair[]
         for row in eachrow(df)
             tmp_string = "insert \$a isa protein, has uniprot-id \"$(row[1])\", has uniprot-name \"$(row[4])\";"
@@ -40,12 +39,14 @@ function uniprot(client::TypeDBClient.AbstractCoreClient, database_name::String,
 
         sess = g.CoreSession(client, database_name , g.Proto.Session_Type.DATA, request_timout=Inf)
 
+        time1 = time()
         if make_inserts
-            start_insert = time()
-               res_insert = insert_data(sess, query_strings, 500)
-            end_insert = time()
-            @info "Uniprot in $(end_insert - start_insert) s"
+            res_insert = insert_data(sess, query_strings, 2000)
         end
+        time2 = time()
+
+        @info "Uniprot took $(round(time2 - time1, digits = 2)) seconds"
+
         return res_insert
 end
 
@@ -63,33 +64,23 @@ function insert_data(session::g.AbstractCoreSession, data::Vector{String}, inter
     ranges = divid_into_intervals(data, intervall)
     length_ranges = length(ranges)
     @info "Length ranges $(length_ranges)"
-    count_channel = Channel(20)
+    count_channel = Channel(length_ranges + 1)
 
-    count_fullfilled_range = 0
-    @info "Made input channel"
-    # make worker
-
-     task = @async for _ in 1:length_ranges
-        tmp =  take!(count_channel)
-        @info "Taken out: $tmp"
-     end
-
-    tmp_session = session
+    tmp_sess = session
+    tmp_client = session.client
     for i in 1:length_ranges
         if i % 4 == 0
-            tmp_client = g.CoreClient("127.0.0.1",1729)
-            tmp_session = g.CoreSession(tmp_client, database_name , g.Proto.Session_Type.DATA, request_timout=Inf)
+            tmp_client = g.CoreClient("127.0.0.1", 1729)
+            tmp_sess = g.CoreSession(tmp_client, database_name , g.Proto.Session_Type.DATA, request_timout=Inf)
         end
-        tmp_trans = g.transaction(tmp_session, g.Proto.Transaction_Type.WRITE)
-        @async transaction_insert(tmp_trans,ranges[i] , count_channel,i)
+        trans_in = g.transaction(tmp_sess, g.Proto.Transaction_Type.WRITE)
+        @async transaction_insert(trans_in, ranges[i], count_channel,i)
     end
 
-    wait(task)
+    for _ in 1:length_ranges
+       tmp = take!(count_channel)
+       @info "Task $tmp is ready"
+    end
 
+    return true
 end
-
-times = uniprot(client, database_name, true)
-
-# for i in 2:length(times)
-#     @info round(times[i] - times[i-1], digits=2)
-# end

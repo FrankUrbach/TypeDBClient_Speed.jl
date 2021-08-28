@@ -1,0 +1,35 @@
+error at ./error.jl:33
+push! at ./linked_list.jl:53 [inlined]
+_wait2 at ./condition.jl:84 [inlined]
+wait at ./condition.jl:109
+lock at ./lock.jl:100
+lock at ./lock.jl:185
+event_callback at /Users/julia/buildbot/worker/package_macos64/build/usr/share/julia/stdlib/v1.7/Downloads/src/Curl/Multi.jl:120
+jfptr_event_callback_19007.clone_1 at /Applications/Julia-1.7.app/Contents/Resources/julia/lib/julia/sys.dylib (unknown line)
+jl_apply_generic at /Applications/Julia-1.7.app/Contents/Resources/julia/lib/julia/libjulia-internal.1.7.dylib (unknown line)
+jlcapi_event_callback_19135.clone_1 at /Applications/Julia-1.7.app/Contents/Resources/julia/lib/julia/sys.dylib (unknown line)
+uv__poll_io at /Applications/Julia-1.7.app/Contents/Resources/julia/lib/julia/libjulia-internal.1.7.dylib (unknown line)
+uv__io_poll at /Applications/Julia-1.7.app/Contents/Resources/julia/lib/julia/libjulia-internal.1.7.dylib (unknown line)
+uv_run at /Applications/Julia-1.7.app/Contents/Resources/julia/lib/julia/libjulia-internal.1.7.dylib (unknown line)
+jl_process_events at /Applications/Julia-1.7.app/Contents/Resources/julia/lib/julia/libjulia-internal.1.7.dylib (unknown line)
+jl_task_get_next at /Applications/Julia-1.7.app/Contents/Resources/julia/lib/julia/libjulia-internal.1.7.dylib (unknown line)
+poptask at ./task.jl:814
+wait at ./task.jl:822 [inlined]
+wait at ./condition.jl:112
+lock at ./lock.jl:100
+lock at ./lock.jl:185
+event_callback at /Users/julia/buildbot/worker/package_macos64/build/usr/share/julia/stdlib/v1.7/Downloads/src/Curl/Multi.jl:120
+jfptr_event_callback_19007.clone_1 at /Applications/Julia-1.7.app/Contents/Resources/julia/lib/julia/sys.dylib (unknown line)
+jl_apply_generic at /Applications/Julia-1.7.app/Contents/Resources/julia/lib/julia/libjulia-internal.1.7.dylib (unknown line)
+jlcapi_event_callback_19135.clone_1 at /Applications/Julia-1.7.app/Contents/Resources/julia/lib/julia/sys.dylib (unknown line)
+uv__poll_io at /Applications/Julia-1.7.app/Contents/Resources/julia/lib/julia/libjulia-internal.1.7.dylib (unknown line)
+uv__io_poll at /Applications/Julia-1.7.app/Contents/Resources/julia/lib/julia/libjulia-internal.1.7.dylib (unknown line)
+uv_run at /Applications/Julia-1.7.app/Contents/Resources/julia/lib/julia/libjulia-internal.1.7.dylib (unknown line)
+jl_process_events at /Applications/Julia-1.7.app/Contents/Resources/julia/lib/julia/libjulia-internal.1.7.dylib (unknown line)
+jl_task_get_next at /Applications/Julia-1.7.app/Contents/Resources/julia/lib/julia/libjulia-internal.1.7.dylib (unknown line)
+poptask at ./task.jl:814
+wait at ./task.jl:822 [inlined]
+task_done_hook at ./task.jl:531
+jl_apply_generic at /Applications/Julia-1.7.app/Contents/Resources/julia/lib/julia/libjulia-internal.1.7.dylib (unknown line)
+jl_finish_task at /Applications/Julia-1.7.app/Contents/Resources/julia/lib/julia/libjulia-internal.1.7.dylib (unknown line)
+start_task at /Applications/Julia-1.7.app/Contents/Resources/julia/lib/julia/libjulia-internal.1.7.dylib (unknown line)
