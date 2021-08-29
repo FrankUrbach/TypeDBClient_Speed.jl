@@ -38,7 +38,7 @@ function single_run(; num = :all, batch_size = 500)
     df = load_data()
     queries = make_queries(df)
     N = num == :all ? length(queries) : num
-    insert_records(queries[1:N], batch_size)
+    single_insert_records(queries[1:N], batch_size)
     return nothing
 end
 
