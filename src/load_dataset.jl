@@ -68,7 +68,7 @@ function parallel_run()
             open(client, "biograkn") do session
                 write(session) do trans
                     for query in batched_queries
-                        insert(trans, query)
+                       insert(trans, query)
                     end
                     commit(trans)
                 end

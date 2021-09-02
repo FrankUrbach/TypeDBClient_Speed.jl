@@ -4,18 +4,22 @@ using Pkg
 Pkg.activate(".")
 
 using TypeDBClient
+using TypeDBClient: CoreSession, CoreClient
+
 using UUIDs
 g = TypeDBClient
 client = g.CoreClient("127.0.0.1",1729)
 Optional{T} = Union{Nothing,T}
 
+@info "deleting all databases"
 dbs = g.get_all_databases(client)
 for item in dbs
     g.delete_database(client, item.name)
 end
 
+@info "create database typedb"
 g.create_database(client, "typedb")
-sess = g.CoreSession(client, "typedb" , g.Proto.Session_Type.DATA, request_timout=Inf)
+sess = CoreSession(client, "typedb" , g.Proto.Session_Type.DATA, request_timout=Inf)
 
 function trans_func(task)
     return task
@@ -55,11 +59,12 @@ function coreTransaction(session::g.CoreSession,
     # return result
 end
 
-a = Vector{g.AbstractCoreTransaction}(undef, 10)
-tmp = nothing
+@info "beginning Threads"
 Threads.@threads for i in 1:3
+    client_in = CoreClient("127.0.0.1", 1729)
+    sess_in = CoreSession(client_in, "typedb", g.Proto.Session_Type.DATA, request_timout=Inf)
     try
-        tmp = coreTransaction(sess,
+        tmp = coreTransaction(sess_in,
         sess.sessionID,
         Int32(1),
         g.TypeDBOptions())

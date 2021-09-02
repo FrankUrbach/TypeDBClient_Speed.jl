@@ -6,11 +6,24 @@
 #    julia --project=. scripts/parallel.jl
 
 using Distributed
+using TypeDBClient
+
+
+@info "Delete database biograkn, create it again and define the schema"
+rootdir = joinpath(@__DIR__, "..")
+include("$rootdir/src/define_schema.jl")
+
+TypeDBClient.dbconnect("127.0.0.1") do client
+    delete_db_create_db(client, "biograkn")
+end
+
 
 @info "Preparing worker processes"
+addprocs(21)
 @everywhere rootdir = joinpath(@__DIR__, "..")
 @everywhere import Pkg
 @everywhere Pkg.activate(rootdir)
+@everywhere ENV["BATCH_SIZE"] = 1000
 @everywhere include("$rootdir/src/load_dataset.jl")
 
 @info "Loading data to all worker processes"

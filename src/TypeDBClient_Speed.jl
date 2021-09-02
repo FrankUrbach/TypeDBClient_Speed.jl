@@ -1,23 +1,27 @@
 using TypeDBClient
 using DataFrames
 using CSV
-using BenchmarkTools
 using Profile
 using ProfileSVG
 using ProfileView
 using Dates
 
-
-g = TypeDBClient
+using TypeDBClient: AbstractCoreSession,
+                    CoreClient,
+                    CoreSession,
+                    AbstractCoreTransaction,
+                    Proto,
+                    commit,
+                    insert
 
 include("define_schema.jl")
 include("utils.jl")
 
 database_name = "biograkn"
 
-client = g.CoreClient("127.0.0.1",1729)
+client = CoreClient("127.0.0.1",1729)
 
-delete_all_dbs_create_db(client, database_name)
+delete_db_create_db(client, database_name)
 @info "Deleted all databases, create database $database_name and the schema"
 
 function uniprot(client::TypeDBClient.AbstractCoreClient, database_name::String, make_inserts::Bool=true)
@@ -37,7 +41,7 @@ function uniprot(client::TypeDBClient.AbstractCoreClient, database_name::String,
 
         @info "Time for preparing: $(end_preparing - start_preparing)"
 
-        sess = g.CoreSession(client, database_name , g.Proto.Session_Type.DATA, request_timout=Inf)
+        sess = CoreSession(client, database_name , Proto.Session_Type.DATA, request_timout=Inf)
 
         time1 = time()
         if make_inserts
@@ -50,31 +54,27 @@ function uniprot(client::TypeDBClient.AbstractCoreClient, database_name::String,
         return res_insert
 end
 
-function transaction_insert(trans::g.AbstractCoreTransaction, data, count_channel::Channel, nr_channel)
+function transaction_insert(trans::AbstractCoreTransaction, data, count_channel::Channel, nr_channel)
     count_transactions = length(trans.session.transactions)
     @info "Channel Nr: $nr_channel is open. Transactions open: $count_transactions"
     for str in data
-        g.insert(trans, str)
+        insert(trans, str)
     end
-    g.commit(trans)
+    commit(trans)
     put!(count_channel, nr_channel)
 end
 
-function insert_data(session::g.AbstractCoreSession, data::Vector{String}, intervall::Int64 = 100)
+function insert_data(session::AbstractCoreSession, data::Vector{String}, intervall::Int64 = 100)
     ranges = divid_into_intervals(data, intervall)
     length_ranges = length(ranges)
     @info "Length ranges $(length_ranges)"
     count_channel = Channel(length_ranges + 1)
 
-    tmp_sess = session
-    tmp_client = session.client
-    for i in 1:length_ranges
-        if i % 4 == 0
-            tmp_client = g.CoreClient("127.0.0.1", 1729)
-            tmp_sess = g.CoreSession(tmp_client, database_name , g.Proto.Session_Type.DATA, request_timout=Inf)
-        end
-        trans_in = g.transaction(tmp_sess, g.Proto.Transaction_Type.WRITE)
-        @async transaction_insert(trans_in, ranges[i], count_channel,i)
+    Threads.@threads for i in 1:length_ranges
+        tmp_client = CoreClient("127.0.0.1", 1729)
+        tmp_session = CoreSession(tmp_client, database_name , Proto.Session_Type.DATA, request_timout=Inf)
+        trans_in = transaction(tmp_session, Proto.Transaction_Type.WRITE)
+        transaction_insert(trans_in, ranges[i], count_channel,i)
     end
 
     for _ in 1:length_ranges
@@ -84,3 +84,5 @@ function insert_data(session::g.AbstractCoreSession, data::Vector{String}, inter
 
     return true
 end
+
+rest = uniprot(client, database_name)
