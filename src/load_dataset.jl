@@ -1,8 +1,18 @@
-using TypeDBClient: dbconnect, insert, commit, transaction, Proto
+using TypeDBClient: dbconnect, insert, commit, match, transaction, Proto, CoreSession, CoreClient
 using DataFrames: DataFrame, eachrow
 using CSV: CSV
 using Base.Threads
 using Distributed
+
+# Warmup
+function warmup()
+    @info "Warmup CoreClient"
+    client = CoreClient("127.0.0.1", 1729)
+    sess = CoreSession(client, "biograkn", Proto.Session_Type.DATA, request_timout = Inf, error_time = 20)
+    trans = transaction(sess, Proto.Transaction_Type.WRITE)
+    match(trans, raw"""match $x sub thing;""")
+    close(client)
+end
 
 function load_data()
     return DataFrame(CSV.File("dataset/uniprot/uniprot.csv"))
@@ -65,14 +75,12 @@ function parallel_run()
     @sync @distributed for i in 1:length(batches)
         batched_queries = batches[i]
         dbconnect("127.0.0.1") do client
-            open(client, "biograkn") do session
-                write(session) do trans
-                    for query in batched_queries
-                       insert(trans, query)
-                    end
-                    commit(trans)
-                end
+            sess = CoreSession(client, "biograkn", Proto.Session_Type.DATA, request_timout = Inf, error_time = 20)
+            trans = transaction(sess, Proto.Transaction_Type.WRITE)
+            for query in batched_queries
+                insert(trans, query)
             end
+            commit(trans)
         end
     end
 end

@@ -19,12 +19,13 @@ end
 
 
 @info "Preparing worker processes"
-addprocs(21)
+procs = addprocs(21)
 @everywhere rootdir = joinpath(@__DIR__, "..")
 @everywhere import Pkg
 @everywhere Pkg.activate(rootdir)
 @everywhere ENV["BATCH_SIZE"] = 1000
 @everywhere include("$rootdir/src/load_dataset.jl")
+@everywhere warmup()
 
 @info "Loading data to all worker processes"
 @everywhere queries = make_queries(load_data())
@@ -45,3 +46,5 @@ end
 @info "Test runs"
 @time parallel_run()
 @time parallel_run()
+
+rmprocs(procs)

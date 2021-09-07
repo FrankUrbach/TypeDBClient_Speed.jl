@@ -70,11 +70,11 @@ function insert_data(session::AbstractCoreSession, data::Vector{String}, interva
     @info "Length ranges $(length_ranges)"
     count_channel = Channel(length_ranges + 1)
 
-    Threads.@threads for i in 1:length_ranges
+    @sync for i in 1:length_ranges
         tmp_client = CoreClient("127.0.0.1", 1729)
-        tmp_session = CoreSession(tmp_client, database_name , Proto.Session_Type.DATA, request_timout=Inf)
+        tmp_session = CoreSession(tmp_client, database_name , Proto.Session_Type.DATA, request_timout=Inf, error_time = 20)
         trans_in = transaction(tmp_session, Proto.Transaction_Type.WRITE)
-        transaction_insert(trans_in, ranges[i], count_channel,i)
+        @async transaction_insert(trans_in, ranges[i], count_channel,i)
     end
 
     for _ in 1:length_ranges
