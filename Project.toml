@@ -16,6 +16,7 @@ TypeDBClient = "7ffdda62-db04-4838-9798-febd00f3125c"
 gRPCClient = "aaca4a50-36af-4a1d-b878-4c443f2061ad"
 
 [compat]
+CSV = "0.9"
 julia = "1.7"
 
 [extras]
