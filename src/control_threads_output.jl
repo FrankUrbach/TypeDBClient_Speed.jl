@@ -11,14 +11,17 @@ g = TypeDBClient
 client = g.CoreClient("127.0.0.1",1729)
 Optional{T} = Union{Nothing,T}
 
-@info "deleting all databases"
-dbs = g.get_all_databases(client)
-for item in dbs
-    g.delete_database(client, item.name)
-end
+# @info "deleting all databases"
+# dbs = g.get_all_databases(client)
+# for item in dbs
+#     g.delete_database(client, item.name)
+# end
 
 @info "create database typedb"
-g.create_database(client, "typedb")
+
+if !g.contains_database(client, "typedb")
+    g.create_database(client, "typedb")
+end
 sess = CoreSession(client, "typedb" , g.Proto.Session_Type.DATA, request_timout=Inf)
 
 function trans_func(task)
@@ -28,20 +31,20 @@ end
 function coreTransaction(session::g.CoreSession,
     sessionId::g.Bytes,
     type::g.EnumType,
-    options::g.TypeDBOptions;
+    options::g.TypeDBOptions,
+    grpc_controller;
     request_timout::Real=session.request_timeout)
 
     type = type
     options = options
     input_channel = Channel{g.Proto.Transaction_Client}(10)
     proto_options = g.copy_to_proto(options, g.Proto.Options)
-    grpc_controller = g.gRPCController(request_timeout=request_timout)
 
     res_imm = g.Proto.transaction(session.client.core_stub.asyncStub , grpc_controller, input_channel, trans_func)
-    # result, status = fetch(res_imm)
+    req_result, status = fetch(res_imm)
 
-    # output_channel = g.grpc_result_or_error(req_result, status, result->result)
-    # println(status)
+    output_channel = g.grpc_result_or_error(req_result, status, result->result)
+    println(status)
 
     # open_req = g.TransactionRequestBuilder.open_req(session.sessionID, type, proto_options,session.networkLatencyMillis)
 
@@ -56,27 +59,22 @@ function coreTransaction(session::g.CoreSession,
     # kind_of_result = g.Proto.which_oneof(req_result, :res)
     # getproperty(req_result, kind_of_result)
 
-    # return result
+    return input_channel
 end
 
 @info "beginning Threads"
-Threads.@threads for i in 1:3
-    client_in = CoreClient("127.0.0.1", 1729)
-    sess_in = CoreSession(client_in, "typedb", g.Proto.Session_Type.DATA, request_timout=Inf)
-    try
-        tmp = coreTransaction(sess_in,
-        sess.sessionID,
-        Int32(1),
-        g.TypeDBOptions())
-        @info "counter $i"
-        @info "Thread ID: $(Threads.threadid())"
-        res, status = fetch(tmp)
-        @info "fetched $(Threads.threadid())"
-        close(res)
-        @info "closed res $(Threads.threadid())"
-    catch ex
-        @info ex
-    end
+client_in = CoreClient("127.0.0.1", 1729)
+sess_in = CoreSession(client_in, "typedb", g.Proto.Session_Type.DATA, request_timout=Inf)
+grpc_controller = g.gRPCController(request_timeout=sess_in.request_timeout)
+Threads.@threads for i in 1:2
+    @info "here I am"
+    res = coreTransaction(sess_in,
+    sess_in.sessionID,
+    g.Proto.Transaction_Type.WRITE,
+    g.TypeDBOptions(),
+    grpc_controller,
+    request_timout = sess_in.request_timeout)
+    @info "I'm close to end"
 end
 
-close(sess)
+# close(sess)

@@ -43,6 +43,7 @@ function uniprot(client::TypeDBClient.AbstractCoreClient, database_name::String,
 
         sess = CoreSession(client, database_name , Proto.Session_Type.DATA, request_timout=Inf)
 
+
         time1 = time()
         if make_inserts
             res_insert = insert_data(sess, query_strings, 2000)

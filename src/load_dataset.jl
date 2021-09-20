@@ -4,15 +4,6 @@ using CSV: CSV
 using Base.Threads
 using Distributed
 
-# Warmup
-function warmup()
-    @info "Warmup CoreClient"
-    client = CoreClient("127.0.0.1", 1729)
-    sess = CoreSession(client, "biograkn", Proto.Session_Type.DATA, request_timout = Inf, error_time = 20)
-    trans = transaction(sess, Proto.Transaction_Type.WRITE)
-    match(trans, raw"""match $x sub thing;""")
-    close(client)
-end
 
 function load_data()
     return DataFrame(CSV.File("dataset/uniprot/uniprot.csv"))
@@ -72,17 +63,31 @@ Run the function again to get warmed-up timings.
 function parallel_run()
     @everywhere batches = collect(Iterators.partition(queries, batch_size))
     @info "Distributing work over " * string(length(batches)) * " batches"
-    @sync @distributed for i in 1:length(batches)
+    result_arr = Int[]
+    data = @sync @distributed (vcat) for i in 1:length(batches)
         batched_queries = batches[i]
         dbconnect("127.0.0.1") do client
+            @info "Entered the client"
             sess = CoreSession(client, "biograkn", Proto.Session_Type.DATA, request_timout = Inf, error_time = 20)
+            @info "Session made"
             trans = transaction(sess, Proto.Transaction_Type.WRITE)
+            @info "Transaction made"
+            res = []
             for query in batched_queries
-                insert(trans, query)
+                i += 1
+                push!(res, insert(trans, query))
+                i % 50 == 0 && @info "insert count: $i"
             end
+            @info "exited the for loop"
             commit(trans)
+
+            @info "Commit confirmed"
+            return res
         end
     end
+
+    @info "Count of results are: $(sum(result_arr))"
+    return data
 end
 
 function get_env_batch_size()
