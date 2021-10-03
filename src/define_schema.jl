@@ -6,7 +6,7 @@ function delete_db_create_db(client::TypeDBClient.AbstractCoreClient, database_n
     end
     create_database(client, database_name)
 
-    sess = CoreSession(client, database_name , Proto.Session_Type.SCHEMA, request_timout=Inf)
+    sess = CoreSession(client, database_name , Proto.Session_Type.SCHEMA, request_timeout=Inf)
     trans = transaction(sess, Proto.Transaction_Type.WRITE)
 
     define_string = read(open("typedb_defines/disease-netowrk-schema.gql"), String)
